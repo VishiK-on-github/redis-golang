@@ -36,10 +36,10 @@ func main() {
 			return
 		}
 
-		fmt.Println(value)
+		_ = value
 
-		// currently returning "OK" for request
-		conn.Write([]byte("+OK\r\n"))
+		writer := NewWriter(conn)
+		writer.Write(Value{typ: "string", str: "OK"})
 
 	}
 }

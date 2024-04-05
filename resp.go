@@ -27,9 +27,19 @@ type Resp struct {
 	reader *bufio.Reader
 }
 
+type Writer struct {
+	writer io.Writer
+}
+
+func NewWriter(w io.Writer) *Writer {
+	return &Writer{writer: w}
+}
+
 func NewResp(reader io.Reader) *Resp {
 	return &Resp{reader: bufio.NewReader(reader)}
 }
+
+/* reading block for various input styles and types */
 
 func (r *Resp) readLine() (line []byte, n int, err error) {
 	for {
@@ -120,7 +130,92 @@ func (r *Resp) Read() (Value, error) {
 	case BULK:
 		return r.readBulk()
 	default:
-		fmt.Println("Unknown type: %v", string(_type))
+		fmt.Printf("Unknown type: %v", string(_type))
 		return Value{}, nil
 	}
 }
+
+/* reading block ends */
+
+/* writing block */
+
+func (v Value) Marshall() []byte {
+	switch v.typ {
+	case "array":
+		return v.marshalArray()
+	case "bulk":
+		return v.marshallBulk()
+	case "string":
+		return v.marshallString()
+	case "null":
+		return v.marshallNull()
+	case "error":
+		return v.marshallError()
+	default:
+		return []byte{}
+	}
+}
+
+func (v Value) marshallString() []byte {
+	var bytes []byte
+
+	bytes = append(bytes, STRING)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
+}
+
+func (v Value) marshallBulk() []byte {
+	var bytes []byte
+
+	bytes = append(bytes, BULK)
+	bytes = append(bytes, strconv.Itoa(len(v.bulk))...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.bulk...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
+}
+
+func (v Value) marshalArray() []byte {
+	len := len(v.array)
+	var bytes []byte
+
+	bytes = append(bytes, ARRAY)
+	bytes = append(bytes, strconv.Itoa(len)...)
+	bytes = append(bytes, '\r', '\n')
+
+	for i := 0; i < len; i++ {
+		bytes = append(bytes, v.array[i].Marshall()...)
+	}
+
+	return bytes
+}
+
+func (v Value) marshallError() []byte {
+	var bytes []byte
+
+	bytes = append(bytes, ERROR)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
+}
+
+func (v Value) marshallNull() []byte {
+	return []byte("$-1\r\n")
+}
+
+func (w *Writer) Write(v Value) error {
+	var bytes = v.Marshall()
+
+	_, err := w.writer.Write(bytes)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+/* writing block ends */
