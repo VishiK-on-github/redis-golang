@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	STRING  = "+"
-	ERROR   = "-"
-	INTEGER = ":"
-	BULK    = "$"
-	ARRAY   = "*"
+	STRING  = '+'
+	ERROR   = '-'
+	INTEGER = ':'
+	BULK    = '$'
+	ARRAY   = '*'
 )
 
 type Value struct {
@@ -124,7 +124,7 @@ func (r *Resp) Read() (Value, error) {
 		return Value{}, err
 	}
 
-	switch string(_type) {
+	switch _type {
 	case ARRAY:
 		return r.readArray()
 	case BULK:
